@@ -12,17 +12,19 @@
 % TCS, 6/12/2017
 
 
-function make_stim_mask(p,fn_out,TR,res)
+% function make_stim_mask(p,fn_out,TR,res)
+function make_stim_mask(p)
 
+TR = p.TR;
 
-if nargin < 4
-    res = 270;
-end
-  
-% if TR in ms...
-if TR > 100
-    TR = TR/1000;
-end
+% if nargin < 4
+res = 270;
+% end
+%   
+% % if TR in ms...
+% if TR > 100
+%     TR = TR/1000;
+% end
 
 dir_all = nan(size(p.bar_pos,1),1);
 size_all = nan(size(p.bar_pos,1),1);
@@ -51,8 +53,8 @@ stimulus.seq = 1:n_TRs;
 % stimulus.seqtiming is TR*(stimulus.seq-1)
 stimulus.seqtiming = TR*(stimulus.seq-1);
 
-fn_seq = sprintf('%s_params.mat',fn_out);
-save(fn_seq,'stimulus');
+% fn_seq = sprintf('%s_params.mat',fn_out);
+% save(fn_seq,'stimulus');
 
 
 % ------ IMAGES FILE ------
@@ -82,11 +84,20 @@ for tt = 1:size(p.bar_pos,1)
     
 end
 
-images = flipud(images); % because vista wants i,j coords
+% images = flipud(images); % because vista wants i,j coords
 
+% NOTE from MMH:
+% to make this match stimmask from Sunyoung's code, we should NOT flip this  up-down 
+% tommy's code did flip it up-down
 
-fn_imgs = sprintf('%s_images.mat',fn_out);
-save(fn_imgs,'images');
+% fn_imgs = sprintf('%s_images.mat',fn_out);
+% save(fn_imgs,'images');
+
+% making it match format of sunyoung's code here
+fn_imgs = sprintf('dots_stim.mat');
+stimmask = images;
+stimcoords = gg;
+save(fn_imgs,'stimmask','stimcoords');
 
 
 
