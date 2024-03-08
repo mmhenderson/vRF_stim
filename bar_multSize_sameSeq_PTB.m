@@ -27,8 +27,8 @@
 
 
 % function bar_multSize_sameSeq_PTB(subj,run,seq)
-% function bar_multSize_sameSeq_PTB()
-try
+function bar_multSize_sameSeq_PTB()
+% try
 
     echo off  
     clear 
@@ -74,6 +74,10 @@ try
     if ~exist(p.data_dir,'dir')
         mkdir(p.data_dir);
     end
+    
+    % save a copy of the currently running script here (in text format) so
+    % we can look at it later if issues arise
+    p.script_text = fileread([mfilename('fullpath'),'.m']);
     
     % seed random number generator (for trial response order, etc)
     rng('default')
@@ -778,24 +782,26 @@ try
 
     return;
 
-catch err
-
-    %If an error occurred in the "try" block, this code is executed
-%    
-%     if exist('OriginalCLUT','var') && ~isempty(OriginalCLUT)
-%         if exist('ScreenNumber','var')
-%             Screen('LoadCLUT', ScreenNumber, OriginalCLUT);
-%         else
-%             Screen('LoadCLUT', 0, OriginalCLUT);
-%         end
-%     end
-    Screen('CloseAll');                
-    ShowCursor;
-    if IsWin
-        ShowHideWinTaskbarMex;     
-    end
-    ListenChar(1)
-    rethrow(err)
-
 end
+
+% catch err
+% 
+%     %If an error occurred in the "try" block, this code is executed
+% %    
+% %     if exist('OriginalCLUT','var') && ~isempty(OriginalCLUT)
+% %         if exist('ScreenNumber','var')
+% %             Screen('LoadCLUT', ScreenNumber, OriginalCLUT);
+% %         else
+% %             Screen('LoadCLUT', 0, OriginalCLUT);
+% %         end
+% %     end
+%     Screen('CloseAll');                
+%     ShowCursor;
+%     if IsWin
+%         ShowHideWinTaskbarMex;     
+%     end
+%     ListenChar(1)
+%     rethrow(err)
+% 
+% end
 
