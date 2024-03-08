@@ -13,18 +13,21 @@
 
 
 % function make_stim_mask(p,fn_out,TR,res)
-function make_stim_mask(p)
+function make_stim_mask(p, TR)
 
-TR = p.TR;
+% TR should be 1 or 2
+
+% % TR = p.TR;
+% TR = 2.0;
 
 % if nargin < 4
 res = 270;
 % end
 %   
-% % if TR in ms...
-% if TR > 100
-%     TR = TR/1000;
-% end
+% if TR in ms...
+if TR > 100
+    TR = TR/1000;
+end
 
 dir_all = nan(size(p.bar_pos,1),1);
 size_all = nan(size(p.bar_pos,1),1);
@@ -38,6 +41,7 @@ end
 
 gg = linspace(min(min(p.bar_pos - size_all/2,[],2),[],1),max(max(p.bar_pos + size_all/2,[],2),[],1),res);
 
+assert(mod(p.step_dur, TR)==0)
 TRs_per_step = round(p.step_dur/TR);
 
 n_TRs = round((p.expt_end-p.expt_start)/TR);
@@ -61,7 +65,7 @@ stimulus.seqtiming = TR*(stimulus.seq-1);
 
 images = zeros(res,res,n_TRs);
 
-
+assert(mod(p.start_wait, TR)==0)
 start_TR = 1+round(p.start_wait/TR); % figure out when to start (1+TR/p.start_wait)
 
 
@@ -94,7 +98,7 @@ end
 % save(fn_imgs,'images');
 
 % making it match format of sunyoung's code here
-fn_imgs = sprintf('dots_stim.mat');
+fn_imgs = sprintf('dots_stim_TR%.1f.mat', TR);
 stimmask = images;
 stimcoords = gg;
 save(fn_imgs,'stimmask','stimcoords');

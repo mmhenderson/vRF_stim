@@ -20,8 +20,10 @@
 
 % Modified by MMH in 2024
 %   for use at CMU / UW Prisma scanner
-%   1.0 second TR
-%   Timing: 304 TRs = 304 seconds = 5:04
+%   Works for 1.0 second TR OR 2.0 second TR (not other vals)
+%   Timing: 304 seconds = 5:04
+%   If 1.0 s TR: 304 TRs
+%   If 2.0 s TR: 152 TRs
 
 
 % function bar_multSize_sameSeq_PTB(subj,run,seq)
@@ -40,22 +42,21 @@ try
     
     % MMH adding this:
     % make a dialog box to enter things
-    prompt = {'Subject Initials','Subject Number',...
+    prompt = {'Subject Initials',...
         'Run Number','Do eyetracking? (0 or 1)', 'Debug mode? (0 or 1)'};
     dlgtitle = 'Enter Run Parameters';
     dims = [1 35];
-    definput = {'XX','99','1','0','0'};
+    definput = {'XX','1','0','0'};
     answer = inputdlg(prompt,dlgtitle,dims,definput);
     
     p.subj = answer{1};  
-    p.sub_num = str2double(answer{2});
-    p.sub_num_str = sprintf('%02d',str2double(answer{2}));
-    p.run = str2double(answer{3});
-    p.do_et = str2double(answer{4});
-    p.debug = str2double(answer{5});
-    
-  
-    p.TR = 1.0; % MMH
+%     p.sub_num = str2double(answer{2});
+%     p.sub_num_str = sprintf('%02d',str2double(answer{2}));
+    p.run = str2double(answer{2});
+    p.do_et = str2double(answer{3});
+    p.debug = str2double(answer{4});
+   
+%     p.TR = 1.0; % MMH
     % p.TR = 1.3; % 1300 ms, our typical 4x multiband 2 mm iso retinotopy seq
     
     if p.debug
@@ -63,7 +64,13 @@ try
     else
         p.data_dir = './data';
     end
-    p.filename = sprintf('%s/%s_r%02.f_RF_bar_multSize_%s.mat',p.data_dir, p.subj,p.run,datestr(now,30));
+
+    p.date_str = datestr(now,'yymmdd'); %Collect todays date (in p.)
+    p.time_str = datestr(now,'HHMMSS'); %Timestamp for saving out a uniquely named datafile (so you will never accidentally overwrite stuff)
+        
+    % filename has unique date/time string in it
+    p.filename = sprintf('%s/%s_r%02.f_RF_bar_multSize_%s_%s.mat',p.data_dir, p.subj, p.run, p.date_str, p.time_str);
+%     p.filename = sprintf('%s/%s_r%02.f_RF_bar_multSize_%s.mat',p.data_dir, p.subj,p.run,datestr(now,30));
     if ~exist(p.data_dir,'dir')
         mkdir(p.data_dir);
     end
@@ -87,17 +94,6 @@ try
     % this is fixed, not random across runs
     % the first column is width of bar (degrees)
     % the second column is which way the bar goes [down,up, left,right]
-%     p.bar_width_multiplier = 2.5; % multiply width integers by this
-
-    p.bar_width_multiplier = 2.0802; 
-    % this multiplier is what we will need to make the masks match with
-    % stimmask in Sunyoung's code. 
-    % because our total degrees vis angle is 18.5946 (BOLDScreen)
-    % their total degrees vis angle is 22.3477;
-    % so our stimulus widths will be slightly smaller to keep the relative
-    % widths the same relative to entire aperture.
-    % alternatively we could use same widths in degrees but will have to
-    % change stimmask.
 
     p.seq = [2     2
             1     3
@@ -112,9 +108,21 @@ try
             3     4
             2     1];
 
+
+    % p.bar_width_multiplier = 2.5; % multiply width integers by this
+    p.bar_width_multiplier = 2.0802; 
+    % this multiplier is what we will need to make the masks match with
+    % stimmask in Sunyoung's code. 
+    % because our total degrees vis angle is 18.5946 (BOLDScreen)
+    % their total degrees vis angle is 22.3477;
+    % so our stimulus widths will be slightly smaller to keep the relative
+    % widths the same relative to entire aperture.
+    % alternatively we could use same widths in degrees but will have to
+    % change stimmask.
+
     p.seq(:,1) = p.seq(:,1)*p.bar_width_multiplier;
-    % so they are [2.5, 5.0, 7.5] degrees widths
-    
+   
+
     % MODIFIED BY MMH 2024
     % these measures are from JP, for BOLDscreen at UW Prisma
     p.viewing_distance = 120; % in cm
@@ -137,17 +145,25 @@ try
     
     % ----- bar stimulus info -----
     
-    if p.run>1 && exist(sprintf('%s/%s_r%02.f_lastCoh.mat',p.data_dir, p.subj,p.run-1),'file')
-        load(sprintf('%s/%s_r%02.f_lastCoh.mat',p.data_dir, p.subj,p.run-1),'init_coh');
+    coh_filename = sprintf('%s/%s_r%02.f_lastCoh_%s.mat',p.data_dir, p.subj, p.run-1, p.date_str);
+    if p.run>1 && exist(coh_filename,'file')
+        % MMH: only loading coherence from same date (if we do multiple
+        % sessions it will start over)
+        fprintf('loading coherence fromm %s\n',coh_filename)
+        %         load(sprintf('%s/%s_r%02.f_lastCoh.mat',p.data_dir, p.subj,p.run-1),'init_coh');
+        load(coh_filename,'init_coh');
+        p.last_coh_filename = coh_filename;
         p.coh_init = init_coh;
         clear init_coh;
     else
         p.coh_init    = 0.55; % TODO: load from file....
     end
-    
+    % where to save coherence from current run when we're all done
+    p.this_coh_filename = sprintf('%s/%s_r%02.f_lastCoh_%s.mat',p.data_dir, p.subj,p.run, p.date_str);
     
     p.n_steps     = 12; % to match previous
-    p.step_dur    = 2*p.TR;% 2.6; % sec
+%     p.step_dur    = 2*p.TR; % sec
+    p.step_dur    = 2.0; 
     p.n_segments  = 3; % for now
     p.dot_speed   = 1.6; % deg/s
     p.dot_life_sec= 0.05;% seconds
@@ -179,8 +195,10 @@ try
     
     % ----- timing info (unrelated to bar) ------
     if ~p.debug
-        p.start_wait = 8*p.TR; % s - time after trigger (10.4 s for 1300 ms)
-        p.end_wait   = 8*p.TR; % s - time after last bar sweep (2.4 s x 4)
+        p.start_wait = 8.0;
+        p.end_wait = 8.0;
+%         p.start_wait = 8*p.TR; % s - time after trigger (10.4 s for 1300 ms)
+%         p.end_wait   = 8*p.TR; % s - time after last bar sweep (2.4 s x 4)
     else
         p.start_wait = 1;
         p.end_wait = 1;
@@ -460,6 +478,8 @@ try
 
             if p.debug && (trial_counter>2)
                 % if we're in "debug mode", will quit after a few trials
+                init_coh = next_coh;
+                save(p.this_coh_filename,'init_coh');
                 continue
             end
     
@@ -665,10 +685,10 @@ try
             if trial_counter <= (p.n_steps * size(p.seq,1))
                 p.target_coherence(trial_counter) = next_coh;
             else % if this is the last trial, save this out
-                tmpfn = sprintf('%s/%s_r%02.f_lastCoh.mat',p.data_dir, p.subj,p.run);
+%                 tmpfn = sprintf('%s/%s_r%02.f_lastCoh.mat',p.data_dir, p.subj,p.run);
                 init_coh = next_coh;
-                save(tmpfn,'init_coh');
-                clear init_coh tmpfn;
+                save(p.this_coh_filename,'init_coh');
+                clear init_coh 
             end
     
             clear this_fix_color; % and other vars
