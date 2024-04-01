@@ -241,10 +241,15 @@ function bar_multSize_sameSeq_PTB()
     
     
     % ----- button info ------
+    KbName('UnifyKeyNames');
     if ismac == 1
         p.esc_key = KbName('escape'); % press this key to abort
     else
-        p.esc_key = KbName('esc');
+        try
+            p.esc_key = KbName('escape');
+        catch
+            p.esc_key = KbName('esc');
+        end
     end
     p.start_key = [KbName('t')]; 
 %     p.start_key = [KbName('5%') KbName('5')];  % should be lower-case t at prisma? (or %5, which is top-row 5, or 5, which is numpad 5)
