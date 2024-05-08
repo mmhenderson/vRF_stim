@@ -253,7 +253,9 @@ function bar_multSize_sameSeq_PTB()
     end
     p.start_key = [KbName('t')]; 
 %     p.start_key = [KbName('5%') KbName('5')];  % should be lower-case t at prisma? (or %5, which is top-row 5, or 5, which is numpad 5)
-    p.resp_keys = [KbName('1!'),KbName('2@')]; % 1 = left/up, 2 = right/down
+    %p.resp_keys = [KbName('1!'),KbName('2@')]; % 1 = left/up, 2 = right/down
+    % Modified for PYKA in "HID_NAR_BYGRT" mode at UW CHN Prisma (JPyles)
+    p.resp_keys = [KbName('y'),KbName('g')]; % 1 = left/up, 2 = right/down
     
     
     
@@ -392,6 +394,8 @@ function bar_multSize_sameSeq_PTB()
     end
     clear resp;
     
+    fprintf('Trigger Received. Starting!\n');
+
     Screen('DrawLines',w, [-1 1 0 0; 0 0 -1 1]*p.ppd*p.fix_size,p.fix_width,p.fix_color,p.scr_center);
     Screen('Flip',w);
     
