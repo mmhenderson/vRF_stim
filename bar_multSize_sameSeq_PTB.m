@@ -46,7 +46,7 @@ function bar_multSize_sameSeq_PTB()
         'Run Number','Do eyetracking? (0 or 1)', 'Debug mode? (0 or 1)'};
     dlgtitle = 'Enter Run Parameters';
     dims = [1 35];
-    definput = {'XX','1','0','0'};
+    definput = {'XX','1','1','0'};
     answer = inputdlg(prompt,dlgtitle,dims,definput);
     
     p.subj = answer{1};  
@@ -114,10 +114,11 @@ function bar_multSize_sameSeq_PTB()
 
 
     % p.bar_width_multiplier = 2.5; % multiply width integers by this
-    p.bar_width_multiplier = 2.0802; 
+%     p.bar_width_multiplier = 2.0802; % this is old value - what was used when JP ran this at UW
+    p.bar_width_multiplier = 1.8;
     % this multiplier is what we will need to make the masks match with
     % stimmask in Sunyoung's code. 
-    % because our total degrees vis angle is 18.5946 (BOLDScreen)
+    % because our total degrees vis angle is 16.09 (BOLDScreen @ Bridge)
     % their total degrees vis angle is 22.3477;
     % so our stimulus widths will be slightly smaller to keep the relative
     % widths the same relative to entire aperture.
@@ -125,14 +126,20 @@ function bar_multSize_sameSeq_PTB()
     % change stimmask.
 
     p.seq(:,1) = p.seq(:,1)*p.bar_width_multiplier;
+
+    disp(unique(p.seq(:,1)))
    
 
     % MODIFIED BY MMH 2024
-    % these measures are from JP, for BOLDscreen at UW Prisma
-    p.viewing_distance = 120; % in cm
+%     p.viewing_distance = 120; % this is OLD measurement, from JP, for BOLDscreen at UW Prisma
+    p.viewing_distance = 139; % this is closer distance, from Eduardo
+    % using this for retinotopy to get bigger eccentricity range
+%     p.viewing_distance = 150; % this is further distance measurement, from Eduardo
     p.screen_height = 39.29;
     
-    p.refresh_rate = 60;
+%     p.refresh_rate = 60;
+    p.refresh_rate = 120;
+
     % 
     % % establish refresh rate for dot lifetime
     % if p.scanner == 0
@@ -255,7 +262,8 @@ function bar_multSize_sameSeq_PTB()
 %     p.start_key = [KbName('5%') KbName('5')];  % should be lower-case t at prisma? (or %5, which is top-row 5, or 5, which is numpad 5)
     %p.resp_keys = [KbName('1!'),KbName('2@')]; % 1 = left/up, 2 = right/down
     % Modified for PYKA in "HID_NAR_BYGRT" mode at UW CHN Prisma (JPyles)
-    p.resp_keys = [KbName('y'),KbName('g')]; % 1 = left/up, 2 = right/down
+%     p.resp_keys = [KbName('y'),KbName('ABg')]; % 1 = left/up, 2 = right/down
+    p.resp_keys = [KbName('y'),KbName('b')]; % 1 = left/up, 2 = right/down
     
     
     
@@ -300,6 +308,7 @@ function bar_multSize_sameSeq_PTB()
     p.screen_width_deg  = 2*atan2d(p.screen_width/2, p.viewing_distance);
     p.ppd = p.resolution(2)/p.screen_height_deg;  % used to convert rects, positions later on
     
+    disp(p.screen_height_deg)
     p.scr_center = p.resolution/2;  % could do offset centers, etc?
     
     fix_aperture_rect = CenterRectOnPoint(p.ppd * [0 0 2 2] * p.fix_aperture_size,p.scr_center(1),p.scr_center(2));
@@ -318,6 +327,8 @@ function bar_multSize_sameSeq_PTB()
     % --------- eyetracking ----------- %
     if p.do_et == 1
     
+
+    
 %         if p.scanner == 1
 %             %Eyelink('SetAddress','192.168.1.5')
 %             %Eyelink('SetAddress','169.254.51.38')
@@ -325,6 +336,11 @@ function bar_multSize_sameSeq_PTB()
     
         el=EyelinkInitDefaults(w);
     
+        % Set display colors
+%         el.backgroundcolour = [0,0,0];
+%         el.foregroundcolour = [100 100 100];
+%         el.calibrationtargetcolour = [255,255,255];
+        
         el.backgroundcolour=p.bg_color(1);  % TODO: fix this?
         el.calibrationtargetcolour=p.fix_color(1);
         %el.calibrationtargetwidth=1;
@@ -333,33 +349,126 @@ function bar_multSize_sameSeq_PTB()
     
         EyelinkUpdateDefaults(el);
     
+  
+        %    Check it came up.
+        if ~EyelinkInit(0)
+            fprintf('Eyelink Init aborted.\n');
+            Eyelink('Shutdown');
+            return;
+        end
+%         Eyelink('Initialize','PsychEyelinkDispatchCallback') % initialises the eyetracker
     
-        Eyelink('Initialize','PsychEyelinkDispatchCallback') % initialises the eyetracker
+       
+        % Sanity check connection
+        connected = Eyelink('IsConnected');
+        [~, vs] = Eyelink('GetTrackerVersion');
+        fprintf('Running experiment on a ''%s'' tracker.\n', vs);
+        
     
-        % SCANNER: right eye!!!!!! TODO: script this, record output...
-        Eyelink('command','calibration_type=HV5'); % updating number of callibration dots
-        s=Eyelink('command','link_sample_data=LEFT,RIGHT,GAZE,AREA');% (,GAZERES,HREF,PUPIL,STATUS,INPUT');
-        s=Eyelink('command', 'sample_rate=500');
-        s=Eyelink('command','screen_pixel_coords=%ld %ld %ld %ld', 0, 0, rect(3)-1,rect(4)-1);
-        s=Eyelink('message', 'DISPLAY_COORDS %ld %ld %ld %ld', 0, 0, rect(3)-1,rect(4)-1);
-        s=Eyelink('command','file_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
-        s=Eyelink('command','file_sample_data = LEFT,RIGHT,GAZE,AREA,GAZERES,STATUS');
-    
-    
+
+        
+        width = rect(3);
+        height = rect(4);
+        ppd = p.ppd;
+
+        % Set display coordinates for EyeLink data by entering left, top, right and bottom coordinates in screen pixels
+        Eyelink('Command','screen_pixel_coords = %ld %ld %ld %ld', 0, 0, width-1, height-1);
+        % Write DISPLAY_COORDS message to EDF file: sets display coordinates in DataViewer
+        % See DataViewer manual section: Protocol for EyeLink Data to Viewer Integration > Pre-trial Message Commands
+        Eyelink('Message', 'DISPLAY_COORDS %ld %ld %ld %ld', 0, 0, width-1, height-1);   
+
+        % Set number of calibration/validation dots and spread: horizontal-only(H) or horizontal-vertical(HV) as H3, HV3, HV5, HV9 or HV13
+        % Eyelink('Command', 'calibration_type = HV9'); % horizontal-vertical 9-points
+        % Eyelink('command', 'calibration_type = HV5');
+
+        
+        % 9-target calibration - specify target locations.
+        Eyelink('command', 'calibration_type = HV9');
+        Eyelink('command', 'generate_default_targets = NO');
+       
+        caloffset=round(4.5*ppd);
+        Eyelink('command','calibration_samples = 10');
+        Eyelink('command','calibration_sequence = 0,1,2,3,4,5,6,7,8,9');
+        Eyelink('command','calibration_targets = %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d',...
+            round(width/2),round(height/2),  round(width/2),round(height/2)-caloffset,  round(width/2),round(height/2) + caloffset,  round(width/2) -caloffset,round(height/2),  round(width/2) +caloffset,round(height/2),...
+            round(width/2)-caloffset, round(height/2)- caloffset, round(width/2)-caloffset, round(height/2)+ caloffset, round(width/2)+caloffset, round(height/2)- caloffset, round(width/2)+caloffset, round(height/2)+ caloffset);
+        Eyelink('command','validation_samples = 9');
+        Eyelink('command','validation_sequence = 0,1,2,3,4,5,6,7,8,9');
+        Eyelink('command','validation_targets = %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d',...
+            round(width/2),round(height/2),  round(width/2),round(height/2)-caloffset,  round(width/2),round(height/2) + caloffset,  round(width/2) -caloffset,round(height/2),...
+            round(width/2) +caloffset,round(height/2),...
+            round(width/2)-caloffset, round(height/2)- caloffset, round(width/2)-caloffset, round(height/2)+ caloffset, round(width/2)+caloffset, round(height/2)- caloffset, round(width/2)+caloffset, round(height/2)+ caloffset);
+        
+
+
+
+%         % Optional: shrink the spread of the calibration/validation targets <x, y display proportion>
+%         % if default outermost targets are not all visible in the bore.
+%         % Default spread is 0.88, 0.83 (88% of the display horizontally and 83% vertically)
+%         Eyelink('command', 'calibration_area_proportion 0.88 0.83');
+%         Eyelink('command', 'validation_area_proportion 0.88 0.83');
+%         
+
+%         Eyelink('command', 'generate_default_targets = NO');
+        
+%         caloffset=round(4.5*p.ppd);
+% 
+%         Eyelink('command','calibration_samples = 10');
+%         Eyelink('command','calibration_sequence = 0,1,2,3,4,5,6,7,8,9');
+%         Eyelink('command','calibration_targets = %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d',...
+%         round(width/2),round(height/2), round(width/2),round(height/2)-caloffset, round(width/2),...
+%         round(height/2) + caloffset, round(width/2) -caloffset,round(height/2), round(width/2) +caloffset,round(height/2),...
+%         round(width/2)-caloffset, round(height/2)- caloffset, round(width/2)-caloffset, round(height/2)+ caloffset, r...
+%         ound(width/2)+caloffset, round(height/2)- caloffset, round(width/2)+caloffset, round(height/2)+ caloffset);
+%         
+%         Eyelink('command','validation_samples = 9');
+%         Eyelink('command','validation_sequence = 0,1,2,3,4,5,6,7,8,9');
+%         Eyelink('command','validation_targets = %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d',...
+%         round(width/2),round(height/2), round(width/2),round(height/2)-caloffset, round(width/2),round(height/2) + caloffset, round(width/2) -caloffset,round(height/2),...round(width/2) +caloffset,round(height/2),...round(width/2)-caloffset, round(height/2)- caloffset, round(width/2)-caloffset, round(height/2)+ caloffset, round(width/2)+caloffset, round(height/2)- caloffset, round(width/2)+caloffset, round(height/2)+ caloffset);
+%         
+
+        
         % make sure that we get gaze data from the Eyelink
     
-    
-    
-        %------ calibrate the eye tracker --------
-        EyelinkDoTrackerSetup(el);
+        % "link" is stuff available online during experiment
+        s = Eyelink('command','link_sample_data=LEFT,RIGHT,GAZE,AREA');% (,GAZERES,HREF,PUPIL,STATUS,INPUT');
+       
         if s~=0
             error('link_sample_data error, status: ',s)
         end
+
+        Eyelink('command', 'sample_rate=500');
+
+        % "file" is stuff that we save to file
+        Eyelink('command','file_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
+        Eyelink('command','file_sample_data = LEFT,RIGHT,GAZE,AREA,GAZERES,STATUS');
+    
+    
+        % make sure we're still connected.
+        if Eyelink('IsConnected')~=1
+            Eyelink( 'Shutdown');
+            return;
+        end
+    
+%         Eyelink('Command', 'clear_screen 0'); % Clear Host PC display from any previus drawing
+
+
+        % Allow a supported EyeLink Host PC button box to accept calibration or drift-check/correction targets via button 5
+%         Eyelink('Command', 'button_function 5 "accept_target_fixation"');
+    
+
+        %------ calibrate the eye tracker --------
+        EyelinkDoTrackerSetup(el);
+        
+        p.eye_used = Eyelink('EyeAvailable');
+
+        fprintf('Writing eyetracking data to: %s\', p.eyedatafile);
         Eyelink('openfile',p.eyedatafile);
     
     end
     
     
+    ListenChar(2);
     
     % ------ beginning of run: fixation ------
     
@@ -384,6 +493,7 @@ function bar_multSize_sameSeq_PTB()
     fprintf('waiting for start\n');
     while resp == 0
         [resp, ~] = checkForResp(p.start_key, p.esc_key);
+       
         if resp == -1
             sca;
             fprintf('ESC pressed during pre-trigger wait time\n');
@@ -571,7 +681,9 @@ function bar_multSize_sameSeq_PTB()
                 % button press from previous trial?
     
                 [resp, time_stamp] = checkForResp(p.resp_keys, p.esc_key);
+                
                 if resp ~= 0
+%                     disp(resp)
                     if resp == -1
                         sca;
                         fprintf('ESC pressed during bar sweep %i, trial number %i\n',ss,trial_counter);
@@ -776,11 +888,14 @@ function bar_multSize_sameSeq_PTB()
     
     if p.do_et == 1
         Eyelink('StopRecording');
+
         Eyelink('ReceiveFile',[p.eyedatafile '.edf'],[p.eyedatafile '.edf']);
-    
+        fprintf('Eyetracking file recieved at: %s\n',[p.eyedatafile '.edf']);
+
         p.eyedatafile_renamed = [p.filename(1:(end-3)) 'edf'];
         movefile([p.eyedatafile '.edf'],p.eyedatafile_renamed);
-    
+        fprintf('Eyetracking file renamed to: %s\n',p.eyedatafile_renamed);
+
         Eyelink('ShutDown');
     end
     
