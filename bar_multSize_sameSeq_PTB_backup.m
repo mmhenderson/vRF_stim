@@ -1,4 +1,3 @@
-
 % bar_multSize_sameSeq_PTB.m
 %
 %
@@ -34,7 +33,6 @@ function bar_multSize_sameSeq_PTB()
     echo off  
     clear 
     close all  hidden
-    Screen('CloseAll')
     
     % to avoid super-aggressive timing tests on windows:
     %Screen('Preference','SyncTestSettings' [, maxStddev=0.001 secs][, minSamples=50][, maxDeviation=0.1][, maxDuration=5 secs]);
@@ -139,8 +137,8 @@ function bar_multSize_sameSeq_PTB()
 %     p.viewing_distance = 150; % this is further distance measurement, from Eduardo
     p.screen_height = 39.29;
     
-    p.refresh_rate = 60;
-    %p.refresh_rate = 120;
+    % p.refresh_rate = 60;
+    p.refresh_rate = 120;
 
     % 
     % % establish refresh rate for dot lifetime
@@ -275,15 +273,12 @@ function bar_multSize_sameSeq_PTB()
     % ----- init screen (geometry; optics) ------
     % sync
 %     Screen('Preference', 'SkipSyncTests', 0);
-    % if p.scanner == 1
-    screenRect = [0 0 1920 1080]; % Position for the first screen
-    [w, rect] = Screen('OpenWindow', 0, p.bg_color, screenRect); 
-    % else
-    %     [w,rect] = Screen('OpenWindow', max(Screen('Screens')),p.bg_color);
-    % end
-
-
-
+%     if p.scanner == 1
+        %[w,rect] = Screen('OpenWindow', 2,p.bg_color);
+    [w,rect] = Screen('OpenWindow', max(Screen('Screens')),p.bg_color);
+%     else
+%         [w,rect] = Screen('OpenWindow', max(Screen('Screens')),p.bg_color);
+%     end
     
     % refresh rate
     ifi = Screen('GetFlipInterval', w);
@@ -350,206 +345,7 @@ function bar_multSize_sameSeq_PTB()
         el.calibrationtargetcolour=p.fix_color(1);
         %el.calibrationtargetwidth=1;
         el.msgfontcolour=p.fix_color(1);
-        el.targetbeep=0;
-        el.feedbackbeep=0;
         p.foregroundcolour=p.fix_color(1);
-
-    
-        EyelinkUpdateDefaults(el);
-    
-  
-        %    Check it came up.
-        if ~EyelinkInit(0)
-            fprintf('Eyelink Init aborted.\n');
-            Eyelink('Shutdown');
-            return;
-        end
-%         Eyelink('Initialize','PsychEyelinkDispatchCallback') % initialises the eyetracker
-    
-       
-        % Sanity check connection
-        connected = Eyelink('IsConnected');
-        disp(connected)
-        [~, vs] = Eyelink('GetTrackerVersion');
-        fprintf('Running experiment on a ''%s'' tracker.\n', vs);
-        
-    
-
-        
-        width = rect(3);
-        height = rect(4);
-        ppd = p.ppd;
-
-        % Set display coordinates for EyeLink data by entering left, top, right and bottom coordinates in screen pixels
-        Eyelink('Command','screen_pixel_coords = %ld %ld %ld %ld', 0, 0, width-1, height-1);
-        % Write DISPLAY_COORDS message to EDF file: sets display coordinates in DataViewer
-        % See DataViewer manual section: Protocol for EyeLink Data to Viewer Integration > Pre-trial Message Commands
-        Eyelink('Message', 'DISPLAY_COORDS %ld %ld %ld %ld', 0, 0, width-1, height-1);   
-
-        % Set number of calibration/validation dots and spread: horizontal-only(H) or horizontal-vertical(HV) as H3, HV3, HV5, HV9 or HV13
-        % Eyelink('Command', 'calibration_type = HV9'); % horizontal-vertical 9-points
-        % Eyelink('command', 'calibration_type = HV5');
-
-        
-        % 9-target calibration - specify target locations.
-        Eyelink('command', 'calibration_type = HV9');
-        Eyelink('command', 'generate_default_targets = NO');
-
-        caloffset=round(4.5*ppd);
-        Eyelink('command','calibration_samples = 10');
-        Eyelink('command','calibration_sequence = 0,1,2,3,4,5,6,7,8,9');
-        Eyelink('command','calibration_targets = %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d',...
-            round(width/2),round(height/2),  round(width/2),round(height/2)-caloffset,  round(width/2),round(height/2) + caloffset,  round(width/2) -caloffset,round(height/2),  round(width/2) +caloffset,round(height/2),...
-            round(width/2)-caloffset, round(height/2)- caloffset, round(width/2)-caloffset, round(height/2)+ caloffset, round(width/2)+caloffset, round(height/2)- caloffset, round(width/2)+caloffset, round(height/2)+ caloffset);
-        Eyelink('command','validation_samples = 9');
-        Eyelink('command','validation_sequence = 0,1,2,3,4,5,6,7,8,9');
-        Eyelink('command','validation_targets = %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d',...
-            round(width/2),round(height/2),  round(width/2),round(height/2)-caloffset,  round(width/2),round(height/2) + caloffset,  round(width/2) -caloffset,round(height/2),...
-            round(width/2) +caloffset,round(height/2),...
-            round(width/2)-caloffset, round(height/2)- caloffset, round(width/2)-caloffset, round(height/2)+ caloffset, round(width/2)+caloffset, round(height/2)- caloffset, round(width/2)+caloffset, round(height/2)+ caloffset);
-        
-
-
-        
-
-
-
-%         % Optional: shrink the spread of the calibration/validation targets <x, y display proportion>
-%         % if default outermost targets are not all visible in the bore.
-%         % Default spread is 0.88, 0.83 (88% of the display horizontally and 83% vertically)
-%         Eyelink('command', 'calibration_area_proportion 0.88 0.83');
-%         Eyelink('command', 'validation_area_proportion 0.88 0.83');
-%         
-
-%         Eyelink('command', 'generate_default_targets = NO');
-        
-%         caloffset=round(4.5*p.ppd);
-% 
-%         Eyelink('command','calibration_samples = 10');
-%         Eyelink('command','calibration_sequence = 0,1,2,3,4,5,6,7,8,9');
-%         Eyelink('command','calibration_targets = %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d',...
-%         round(width/2),round(height/2), round(width/2),round(height/2)-caloffset, round(width/2),...
-%         round(height/2) + caloffset, round(width/2) -caloffset,round(height/2), round(width/2) +caloffset,round(height/2),...
-%         round(width/2)-caloffset, round(height/2)- caloffset, round(width/2)-caloffset, round(height/2)+ caloffset, r...
-%         ound(width/2)+caloffset, round(height/2)- caloffset, round(width/2)+caloffset, round(height/2)+ caloffset);
-%         
-%         Eyelink('command','validation_samples = 9');
-%         Eyelink('command','validation_sequence = 0,1,2,3,4,5,6,7,8,9');
-%         Eyelink('command','validation_targets = %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d %d,%d',...
-%         round(width/2),round(height/2), round(width/2),round(height/2)-caloffset, round(width/2),round(height/2) + caloffset, round(width/2) -caloffset,round(height/2),...round(width/2) +caloffset,round(height/2),...round(width/2)-caloffset, round(height/2)- caloffset, round(width/2)-caloffset, round(height/2)+ caloffset, round(width/2)+caloffset, round(height/2)- caloffset, round(width/2)+caloffset, round(height/2)+ caloffset);
-%         
-
-        
-        % make sure that we get gaze data from the Eyelink
-    
-        % "link" is stuff available online during experiment
-        s = Eyelink('command','link_sample_data=LEFT,RIGHT,GAZE,AREA');% (,GAZERES,HREF,PUPIL,STATUS,INPUT');
-       
-        if s~=0
-            error('link_sample_data error, status: ',s)
-        end
-
-        Eyelink('command', 'sample_rate=500');
-
-        % "file" is stuff that we save to file
-        Eyelink('command','file_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
-        Eyelink('command','file_sample_data = LEFT,RIGHT,GAZE,AREA,GAZERES,STATUS');
-    
-    
-        % make sure we're still connected.
-        if Eyelink('IsConnected')~=1
-            Eyelink( 'Shutdown');
-            return;
-        end
-    
-%         Eyelink('Command', 'clear_screen 0'); % Clear Host PC display from any previus drawing
-
-
-        % Allow a supported EyeLink Host PC button box to accept calibration or drift-check/correction targets via button 5
-%         Eyelink('Command', 'button_function 5 "accept_target_fixation"');
-    
-
-        %------ calibrate the eye tracker --------
-        EyelinkDoTrackerSetup(el);
-        
-        p.eye_used = Eyelink('EyeAvailable');
-    else
-        [w, rect] = Screen('OpenWindow', 0, p.bg_color, screenRect); 
-        % [w,rect] = Screen('OpenWindow', max(Screen('Screens')),p.bg_color);
-    end
-
-
-
-    
-    % refresh rate
-    ifi = Screen('GetFlipInterval', w);
-    p.actual_refresh  = 1 / ifi;
-    
-    % check that refresh rate is as expected
-    if abs(p.actual_refresh-p.refresh_rate)>10
-        error('bar_multSize_sameSeq_PTB:unexpectedRefreshRate','Refresh rate expected to be %0.03f; %0.03f measured',p.refresh_rate,p.actual_refresh);
-    end
-    
-    
-    
-    Screen('BlendFunction', w, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    
-    
-    
-    
-    % ----- display info (unrelated to bar) -------
-    
-    p.resolution_actual = [rect(3) rect(4)]; % pixels
-    p.resolution = p.resolution_actual;
-    
-    % potentially a square aperture? or aperture that looks like bore insert?
-    
-    p.screen_width = p.screen_height * p.resolution(1)/p.resolution(2); %
-    p.screen_height_deg = 2*atan2d(p.screen_height/2,p.viewing_distance);
-    p.screen_width_deg  = 2*atan2d(p.screen_width/2, p.viewing_distance);
-    p.ppd = p.resolution(2)/p.screen_height_deg;  % used to convert rects, positions later on
-    
-    disp(p.screen_height_deg)
-    p.scr_center = p.resolution/2;  % could do offset centers, etc?
-    
-    fix_aperture_rect = CenterRectOnPoint(p.ppd * [0 0 2 2] * p.fix_aperture_size,p.scr_center(1),p.scr_center(2));
-    
-    % ----- compute bar properties along its axis -------
-    % aperture along long axis of bar for each segment - width determined by
-    % seq
-    p.bar_segment_size_deg = (p.bar_extent * p.screen_height_deg/p.n_segments) - p.segment_gap;
-    p.bar_segment_centers_deg = (((1:p.n_segments)-0.5)-p.n_segments/2) * (p.bar_extent * p.screen_height_deg / p.n_segments); % where the segments are centered
-    
-    
-    
-    HideCursor;
-    ListenChar(2);
-    
-    % --------- eyetracking ----------- %
-    if p.do_et == 1
-    
-
-    
-%         if p.scanner == 1
-%             %Eyelink('SetAddress','192.168.1.5')
-%             %Eyelink('SetAddress','169.254.51.38')
-%         end
-    
-        el=EyelinkInitDefaults(w);
-    
-        % Set display colors
-%         el.backgroundcolour = [0,0,0];
-%         el.foregroundcolour = [100 100 100];
-%         el.calibrationtargetcolour = [255,255,255];
-        
-        el.backgroundcolour=p.bg_color(1);  % TODO: fix this?
-        el.calibrationtargetcolour=p.fix_color(1);
-        %el.calibrationtargetwidth=1;
-        el.msgfontcolour=p.fix_color(1);
-        el.targetbeep=0;
-        el.feedbackbeep=0;
-        p.foregroundcolour=p.fix_color(1);
-
     
         EyelinkUpdateDefaults(el);
     
@@ -1066,20 +862,6 @@ function bar_multSize_sameSeq_PTB()
     
     save(p.filename,'p');
     
-    
-    
-    % ------ end of run - present feedback -------------
-    Screen('Preference','TextRenderer',1);
-    Screen('DrawLines',w, [-1 1 0 0; 0 0 -1 1]*p.ppd*p.fix_size,p.fix_width,p.fix_color,p.scr_center);
-    txt = sprintf('Acc: %.02f%%, %i missed responses',100*nansum(p.correct)/sum(~isnan(p.correct)),sum(isnan(p.correct)));
-    Screen('TextSize', w, 30);
-    DrawFormattedText(w,txt,'center',p.scr_center(2)-3*p.ppd,p.fix_color);
-    %normBoundsRect = Screen('TextBounds', w, txt);
-    %txtloc = [p.xc - normBoundsRect(3)/2, 2 * p.ppd + p.yc - normBoundsRect(4)/2];
-    %Screen('DrawText', w, txt,txtloc(1),txtloc(2), 255 );
-    Screen('Flip',w);
-
-    
     if p.do_et == 1
         Eyelink('StopRecording');
 
@@ -1092,8 +874,18 @@ function bar_multSize_sameSeq_PTB()
 
         Eyelink('ShutDown');
     end
-
-
+    
+    % ------ end of run - present feedback -------------
+    Screen('Preference','TextRenderer',1);
+    Screen('DrawLines',w, [-1 1 0 0; 0 0 -1 1]*p.ppd*p.fix_size,p.fix_width,p.fix_color,p.scr_center);
+    txt = sprintf('Acc: %.02f%%, %i missed responses',100*nansum(p.correct)/sum(~isnan(p.correct)),sum(isnan(p.correct)));
+    Screen('TextSize', w, 30);
+    DrawFormattedText(w,txt,'center',p.scr_center(2)-3*p.ppd,p.fix_color);
+    %normBoundsRect = Screen('TextBounds', w, txt);
+    %txtloc = [p.xc - normBoundsRect(3)/2, 2 * p.ppd + p.yc - normBoundsRect(4)/2];
+    %Screen('DrawText', w, txt,txtloc(1),txtloc(2), 255 );
+    Screen('Flip',w);
+    
     resp = 0;
     fprintf('waiting for final space\n');
     while resp == 0
